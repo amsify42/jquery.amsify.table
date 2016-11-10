@@ -48,10 +48,14 @@
 
     AmsifyTable.setSort = function(config) {
 
+      var type            = defaultType;
       var tableSelector   = defaultTableSelector;
       var sortSelector    = defaultSortSelector;  
 
       if(config !== undefined) {
+        if(config.type !== undefined) { 
+         type  = config.type;
+       }
         if(config.tableSelector !== undefined) { 
          tableSelector  = config.tableSelector;
        }
@@ -69,9 +73,9 @@
        columnNames.push(name);
        if($(column).attr('selecthtml')) {
         var htmlSeletor     = $(column).attr('selecthtml');
-        columnInputs[name]  = '<select class="amsify-column-input">'+$(htmlSeletor).html()+'</select>';
+        columnInputs[name]  = '<select class="'+getInputClass(type)+'">'+$(htmlSeletor).html()+'</select>';
        } else {
-        columnInputs[name]   = '<input type="text" placeholder="'+name+'" class="amsify-column-input"/>';
+        columnInputs[name]   = '<input type="text" placeholder="'+name+'" class="'+getInputClass(type)+'"/>';
        }
      });
 
@@ -284,7 +288,19 @@
 
 
 
+    function getInputClass(type) {
+      var inputClass = 'amsify-column-input';
 
+      if(type == 'bootstrap') {
+        inputClass += ' form-control';
+      }
+      else if(type == 'materialize') {
+        inputClass += ' browser-default';
+      }
+
+      return inputClass;
+    };
+ 
 
 
 
