@@ -3,9 +3,6 @@
  (function(AmsifyTable, $, undefined) {
 
     //Private Property
-    var base_url                   = window.location.protocol+'//'+window.location.host;
-    var _token                     = $('meta[name="_token"]').attr('content');
-
     var defaultType                = 'bootstrap';
     var defaultTableSelector       = 'table';
     var defaultSortSelector        = '.amsify-sort-table';
@@ -19,8 +16,6 @@
     
 
     //Public Property
-    AmsifyTable.base_url        = base_url;
-
     AmsifyTable.Table = function() {
       AmsifyTable.Table.prototype.set = function(config) {
         if(config !== undefined) {
@@ -28,6 +23,7 @@
         } else {
           AmsifyTable.setSort();
         }
+        AmsifyHelper.bodyLoaderIEfix();
       };
     };
 
@@ -71,14 +67,25 @@
       $.each(columns, function(key, column){
         var name              = $.trim($(column).text());
        columnNames.push(name);
-       if($(column).attr('selecthtml')) {
+
+       if($(column).hasClass('skip')) {
+        $(column).removeClass(sortSelector.substring(1));
+        columnInputs[name]  = '';
+       }
+       else if($(column).attr('selecthtml')) {
         var htmlSeletor     = $(column).attr('selecthtml');
         columnInputs[name]  = '<select class="'+getInputClass(type)+'">'+$(htmlSeletor).html()+'</select>';
-       } else {
-        columnInputs[name]   = '<input type="text" placeholder="'+name+'" class="'+getInputClass(type)+'"/>';
+       } 
+       else if($(column).attr('datepicker')) {
+        columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+getInputClass(type, 'date', $(column).attr('datepicker'))+'"/>';
+       }
+       else {
+        columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+getInputClass(type, name)+'"/>';
        }
      });
 
+
+      // If Ajax method is set
       if($(this).attr('data-method')) {
         if(config === undefined) {
             config = {};
@@ -86,10 +93,66 @@
         config['ajaxMethod'] = $(this).data('method');
       }
 
+
+      // If Drag Sortable is set
+      if($(this).attr('drag-sortable')) {
+        AmsifyTable.setDraggableSort(this);
+      }
+
       AmsifyTable.setColumnInputs(this, columnNames, columnInputs);
       AmsifyTable.sortRows(this, sortSelector, config);
       AmsifyTable.sortPaginate(this, config);
     });
+   };
+
+
+   AmsifyTable.setDraggableSort = function(tableSelector) {
+      $(tableSelector).addClass('sortable-table');
+      $(function() {
+        $(tableSelector).find('tbody').sortable({
+          placeholder: 'ui-state-highlight',
+          stop: function(event, ui) {
+            var IDs = $(this).sortable('toArray');
+            AmsifyTable.callAjax(this, tableSelector, IDs);
+          }
+        });
+        $(tableSelector).find('tbody').disableSelection();
+      });
+   };
+
+   AmsifyTable.callAjax = function(sortable, tableSelector, IDs) {
+      $.ajax({
+          type        : "POST",
+          url         : AmsifyHelper.getActionURL($(tableSelector).attr('drag-sortable')),
+          data        : { ids : IDs, _token : AmsifyHelper.getToken()},
+          beforeSend  : function() {
+            $('.section-body-loader').show();
+            $(sortable).sortable('disable');
+          },
+          success     : function (data) {
+            console.info('Success', data);
+            var msgType = 'black';
+            if(data['status'] !== undefined) {
+              if(data['status'] == 'success') {
+                msgType = 'success';
+              } else if(data['status'] == 'info') {
+                msgType = 'info';
+              } else {
+                msgType = 'error';
+              }
+            }
+            AmsifyHelper.showFlash(data['message'], msgType);
+          },
+          error       : function (data) {
+            console.info('Error', data);
+            $(sortable).sortable('cancel');
+            AmsifyHelper.showFlash('Something went wrong', 'error');
+          },
+          complete    : function() {
+            $('.section-body-loader').hide();
+            $(sortable).sortable('enable');
+          } 
+      });
    };
 
    AmsifyTable.sortPaginate = function(tableSelector, config) {
@@ -124,8 +187,8 @@
 
        if(href) {
         ajaxMethod = href;
-       } else {
-        ajaxMethod = AmsifyTable.base_url+'/'+ajaxMethod;
+       } else if($(tableSelector).data('method')) {
+        ajaxMethod = AmsifyHelper.getActionURL($(tableSelector).data('method'));
        }
 
        AmsifyTable.loadSortedResult(column, input, sortType, tableSelector, contentType, paginateSelector, ajaxMethod, page, config);       
@@ -176,6 +239,10 @@
         $(sortSelector).removeClass('active-sort');
         $(this).addClass('active-sort');
 
+        if($(this).hasClass('skip')) {
+          return false;
+        }
+
         var rowHtml         = $(this).html();
         var rowtxt          = $(this).clone().children().remove().end().text();
         var cellIndex       = $(this).parent('th').index();
@@ -195,7 +262,7 @@
         var insertHtml      = result['insertHtml'];
 
 
-        AmsifyTable.loadSortedResult(rowtxt, rowSearchInput, result['sort_type'], tableSelector, contentType, paginateSelector, AmsifyTable.base_url+'/'+ajaxMethod, 1);
+        AmsifyTable.loadSortedResult(rowtxt, rowSearchInput, result['sort_type'], tableSelector, contentType, paginateSelector, AmsifyHelper.getActionURL(ajaxMethod), 1);
 
         if(type == 'bootstrap') {
           $(sortSelector).find('.fa').remove();
@@ -242,45 +309,41 @@
 
    AmsifyTable.loadSortedResult = function(sortColumn, rowSearchInput, type, tableSelector, contentType, paginateSelector, ajaxMethod, page, config) {
 
-    var callback = defaultCallback;
+    var afterSort = defaultCallback;
 
     if(config !== undefined) {
-      if(config.callback && typeof config.callback == "function") {
-          callback = config.callback;
+      if(config.afterSort && typeof config.afterSort == "function") {
+          afterSort = config.afterSort;
         }
     }
 
-    $(tableSelector).css('opacity', 0.5);
+    
     $('.section-body-loader').show();
     $.ajax({
-      type    : "POST",
-      url     : ajaxMethod,
-      data    : { column : sortColumn, input : rowSearchInput, type : type, page : page, _token : _token},
-      success : function (data) {
-        //console.info('Success', data);
+      type        : "POST",
+      url         : ajaxMethod,
+      data        : { column : sortColumn, input : rowSearchInput, type : type, page : page, _token : AmsifyHelper.getToken()},
+      beforeSend  : function() {
+        $(tableSelector).css('opacity', 0.5);
+      },
+      success     : function (data) {
         if(contentType == 'table') {
           $(tableSelector).find('tbody').html(data['html']);
         } else {
           $(tableSelector).html(data['html']);  
         }
-
         $(paginateSelector).html(data['links']);
-        $(tableSelector).css('opacity', '1');
-        $('.section-body-loader').hide();
-        // if(Amsify.detectIE() == false) {
-        //   window.history.pushState('', '', '?page='+page);
-        //   $("html, body").animate({ scrollTop: 0 }, "slow");
-        // }
-        if(callback && typeof callback == "function") {
-            callback();
-        }
-        return true;
       },
       error   : function (data) {
-        //console.info('Error', data);
+        console.info('Error', data);
+      },
+      complete    : function() {
         $(tableSelector).css('opacity', '1');
         $('.section-body-loader').hide();
-        return false;
+        AmsifyHelper.showURL('', page);
+        if(afterSort && typeof afterSort == "function") {
+            afterSort();
+        }
       } 
     });
 
@@ -288,7 +351,7 @@
 
 
 
-    function getInputClass(type) {
+    function getInputClass(type, name, format) {
       var inputClass = 'amsify-column-input';
 
       if(type == 'bootstrap') {
@@ -298,31 +361,63 @@
         inputClass += ' browser-default';
       }
 
+      if(name !== undefined) {
+        name = name.toLowerCase();  
+        if(name == 'date' || name.indexOf('date') == 0) {
+          inputClass += ' datepicker';
+          if(format !== undefined && format != '')   {
+            setDatePicker(type, format);
+          } else {
+            setDatePicker(type);
+          }
+        }
+      }
       return inputClass;
+    };
+
+
+    function setDatePicker(type, format) {
+      var defaultFormat = 'yy-mm-dd';
+      if(format !== undefined) {
+        defaultFormat = format;
+      }
+      if(type == 'bootstrap') {
+        $(function() {
+          $('.datepicker').datepicker({
+            dateFormat: defaultFormat,
+          });
+        });
+      } else {
+        $(function() {
+          $('.datepicker').datepicker({
+            dateFormat: defaultFormat,
+          });
+        });
+      }
     };
  
 
 
 
-  function getSortIcon(rowHtml, type, rowSearchInput) {
+    function getSortIcon(rowHtml, type, rowSearchInput) {
         var result = [];
         // If css is bootstrap  
         if(type == 'bootstrap') {
-         result['basic'] = '<span class="fa fa-sort"></span>';
+         result['basic'] = ' <span class="fa fa-sort"></span>';
 
          var htmlArray  = rowHtml.split('class=');
          var reqHtml    = $.trim(htmlArray[1]);
 
          if(reqHtml == '' || reqHtml == '"fa fa-sort"></span>') {
-          result['insertHtml'] = '<span class="fa fa-sort-asc"></span>';
+          result['insertHtml'] = ' <span class="fa fa-sort-asc"></span>';
           result['sort_type']  = 'asc';
         } 
         else if(reqHtml == '"fa fa-sort-asc"></span>') {
-          result['insertHtml'] = '<span class="fa fa-sort-desc"></span>';
+          result['insertHtml'] = ' <span class="fa fa-sort-desc"></span>';
           result['sort_type']  = 'desc';
         } 
         else {
-          result['insertHtml'] = '<span class="fa fa-sort"></span>';
+          result['insertHtml'] = ' <span class="fa fa-sort"></span>';
           result['sort_type']  = 'default';
         }
 
@@ -330,19 +425,19 @@
 
         // If css is simple or default
         else {
-          result['basic'] = ' <span class="sort-icon"><img src="'+AmsifyTable.base_url+'/images/arrow-updown.png"></span>';
+          result['basic'] = ' <span class="sort-icon"><img src="'+AmsifyHelper.base_url+'/images/arrow-updown.png"></span>';
           var htmlArray   = rowHtml.split('class="sort-icon">');
           var reqHtml     = $.trim(htmlArray[1]);
-          if(reqHtml == '' || reqHtml == '<img src="'+AmsifyTable.base_url+'/images/arrow-updown.png"></span>') {
-            result['insertHtml'] = '<span class="sort-icon"><img src="'+AmsifyTable.base_url+'/images/arrow-up.png"></span>';
+          if(reqHtml == '' || reqHtml == '<img src="'+AmsifyHelper.base_url+'/images/arrow-updown.png"></span>') {
+            result['insertHtml'] = ' <span class="sort-icon"><img src="'+AmsifyHelper.base_url+'/images/arrow-up.png"></span>';
             result['sort_type']  = 'asc';
           } 
-          else if(reqHtml == '<img src="'+AmsifyTable.base_url+'/images/arrow-up.png"></span>') {
-            result['insertHtml'] = '<span class="sort-icon"><img src="'+AmsifyTable.base_url+'/images/arrow-down.png"></span>';
+          else if(reqHtml == '<img src="'+AmsifyHelper.base_url+'/images/arrow-up.png"></span>') {
+            result['insertHtml'] = ' <span class="sort-icon"><img src="'+AmsifyHelper.base_url+'/images/arrow-down.png"></span>';
             result['sort_type']  = 'desc';
           } 
           else {
-            result['insertHtml'] = '<span class="sort-icon"><img src="'+AmsifyTable.base_url+'/images/arrow-updown.png"></span>';
+            result['insertHtml'] = ' <span class="sort-icon"><img src="'+AmsifyHelper.base_url+'/images/arrow-updown.png"></span>';
             result['sort_type']  = 'default';
           }
         }
@@ -355,9 +450,9 @@
 
     function setDefaultSortIcon(sortSelector, type) {
       //var defaultIcon = '<span class="sort-icon">&harr;</span>';
-      var defaultIcon = '<span class="sort-icon"><img src="'+AmsifyTable.base_url+'/images/arrow-updown.png"></span>';
+      var defaultIcon = ' <span class="sort-icon"><img src="'+AmsifyHelper.base_url+'/images/arrow-updown.png"></span>';
       if(type == 'bootstrap') {
-        defaultIcon = '<span class="fa fa-sort"></span>';      
+        defaultIcon = ' <span class="fa fa-sort"></span>';      
       }
       $(sortSelector).append(defaultIcon);
     };
@@ -365,45 +460,92 @@
 
 
 
-    function removeRow(tableSelector, rowSelector) {
 
-      $(tableSelector+' '+rowSelector).css({"background-color":"#FF9999",'color':''});
+    AmsifyTable.tableOperation = function(type, selector, index, html) {
 
-      setTimeout(function() {
-        $(tableSelector+' '+rowSelector).css({"background-color":"",'color':''}).effect("highlight", {}, maxTimeOut);
-      }, maxTimeOut);
-
-      $(tableSelector+' tbody').find(rowSelector).fadeOut(minTimeOut);
-      setTimeout(function() {
-
-        $(tableSelector+' tbody').find(rowSelector).remove();
-      }, minTimeOut);
-    };
-
-
-
-    function addRow(tableSelector, rowContent) {
-
-      $(tableSelector+" tbody").prepend(rowContent);
-      $(tableSelector+" tbody tr:first").css({"background-color":"#CCFFCC",'color':''});
-
-      setTimeout(function() {
-        $(tableSelector+" tbody tr:first").css({"background-color":"",'color':''}).effect("highlight", {}, maxTimeOut);
-      }, maxTimeOut);
+      if(type == 'add') {
+        AmsifyTable.addRow(selector, html);
+      } 
+      else if(type == 'update') {
+        AmsifyTable.updateRow(selector, index, html);
+      }
+      else if(type == 'delete') {
+        AmsifyTable.removeRow(selector, index);
+      }
 
     };
 
 
-    function updateRow(tableSelector, rowSelector, rowContent) {
+    AmsifyTable.addRow = function(content, rowContent) {
 
-      $(tableSelector+" tbody").find(rowSelector).empty().html(rowContent);
-      $(tableSelector+" "+rowSelector).css({"background-color":"#2FAFE5",'color':''});
+      if(content == 'table') {
 
-      setTimeout(function() {
-        $(tableSelector+" "+rowSelector).css({"background-color":'','color':''}).effect("highlight", {}, maxTimeOut);
-      }, maxTimeOut);
+        $table = $(content+' tbody');
+
+        $table.find('.amsify-not-found').remove();
+        $table.prepend(rowContent);
+        $(content+' tbody tr:first').css({'background-color':'#CCFFCC','color':''});
+        setTimeout(function() {
+          $(content+' tbody tr:first').css({'background-color':'','color':''});
+        }, 3000);
+
+      } else {
+
+        $table = $(content);
+        $table.find('.amsify-not-found').remove();
+        $table.children('div:eq(0)').after(rowContent);
+        $(content+' div:eq(1)').css({'background-color':'#CCFFCC','color':''});
+        setTimeout(function() {
+          $(content+' div:eq(1)').css({'background-color':'','color':''});
+        }, 3000);
+
+      }
 
     };
+
+
+
+    AmsifyTable.updateRow = function(content, rowIndex, rowContent) {
+
+      if(content == 'table') {
+        $row = $(content).closest('table').find('tbody tr:eq('+rowIndex+')');
+      } else {
+        $row = $(content+' div:eq('+rowIndex+')');
+      }
+
+      $row.empty().html(rowContent).css({"background-color":"#2FAFE5",'color':''});
+
+      setTimeout(function() {
+        $row.css({'background-color':'','color':''});
+      }, 3000);
+
+    };
+
+
+    AmsifyTable.removeRow = function(content, rowIndex) {
+
+      if(content == 'table') {
+        $row = $(content).closest('table').find('tbody tr:eq('+rowIndex+')');
+      } else {
+        $row = $(content+' div:eq('+rowIndex+')');
+      }
+
+
+      $row.css({"background-color":"#FF9999",'color':''});
+
+      setTimeout(function() {
+        $row.css({"background-color":"",'color':''});
+      }, 3000);
+
+      $row.fadeOut(3000);
+      
+      setTimeout(function() {
+        $row.remove();
+      }, 3000);
+
+
+    };  
+
 
 
 
@@ -431,8 +573,8 @@
        if(config.ajaxMethod !== undefined) {
          defaultAjaxMethod = config.ajaxMethod;
        }
-       if(config.callback !== undefined) {
-         defaultCallback = config.callback;
+       if(config.afterSort !== undefined) {
+         defaultCallback = config.afterSort;
        }
      }
    };
