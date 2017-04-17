@@ -49,13 +49,12 @@ Note these following things
 
 ### Explanation
 1. This will generate one more row at top of the table with inputs to search these columns and sort icons with click events. When clicked or searched it will call ajax method mentioned in **data-method** attribute.
-<br/>
 2. Json response should be array with status, html containing list of table rows and pagination links if required. Below is the json response example.
 ```js
   {
     status : 'success',
     html : '<tr>..</tr>',
-    links: '<li>..</li>',
+    links: '<li>..</li>'
   }
 ```
 If you want some other inputs in table head row instead of input type text, you can do like this
