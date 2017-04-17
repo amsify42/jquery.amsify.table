@@ -42,8 +42,8 @@ If you want to sort the table by calling ajax
   </div>
   
 ```
-Note all these following things
-1. data-method attribute in table
+Note these following things
+1. **data-method** attribute in table
 2. **amsify-sort-table** in anchor tags of **thead > tr > th** elements
 3. div tag with id **pagination**
 
@@ -54,8 +54,8 @@ Note all these following things
 ```js
   {
     status : 'success',
-    html : '<tr>..</tr> <tr>..</tr>',
-    links: '<li>..</li> <li>..</li>',
+    html : '<tr>..</tr>',
+    links: '<li>..</li>',
   }
 ```
 If you want some other inputs in table head row instead of input type text, you can do like this
