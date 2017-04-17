@@ -109,7 +109,7 @@ If you want to reorder table rows by dragging, you can simply add the attribute 
     <tr id="3">...</tr>
   </table>
 ```
-**Note:** We are putting unique id to every tr tag that must differentiate them when calling ajax.
+**Note:** We are putting unique id to every tr tag that must differentiate them while calling ajax.
 <br/>
 If you want to skip the row which need not to be reordered, you can add **.unsort** class to it.
   ```html
