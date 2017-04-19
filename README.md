@@ -3,7 +3,7 @@ This a Jquery plugin for tables which can be use for sorting tables through Ajax
 
 #### Requires
 1. **jquery.js** library
-2. **jquery.amsify.helper.js** file which is there in my **jquery.amsify.helper** repository
+2. **jquery.amsify.helper.js** file which is there in my **jquery.amsify.helper** repository with all its css and image files.
 
 This is the way you can initialize it.
 ```js
