@@ -68,6 +68,12 @@
                   columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+getInputClass(type, name)+'"/>';
                 }
               });
+              // If Drag Sortable is set
+              if($(this._table).attr('drag-sortable')) {
+                var ajaxAction  = $(this._table).attr('drag-sortable');
+                $(this._table).find('tbody').addClass('tbody');
+                AmsifyHelper.setDraggableSort($(this._table).find('.tbody'), settings.sortMethod, 'id', {}, config);
+              }
             },
 
             setColumnInputs     : function(names, inputs) {
@@ -106,7 +112,7 @@
                 var basicSort       = result['basic'];
                 var insertHtml      = result['insertHtml'];
 
-                AmsifyTable.loadSortedResult(rowtxt, rowSearchInput, result['sort_type'], tableSelector, contentType, paginateSelector, AmsifyHelper.getActionURL(ajaxMethod), 1);
+                AmsifyTable.loadSortedResult(rowtxt, rowSearchInput, result['sort_type'], 1);
 
                 if(type == 'bootstrap') {
                   $('.'+this.columnSelector).find('.fa').remove();
@@ -172,7 +178,7 @@
                 $(this._table).css('opacity', 0.5);
               };
               ajaxConfig['afterSuccess'] = function(data) {
-                  if(contentType == 'table') {
+                  if(settings.contentType == 'table') {
                     $(this._table).find('tbody').html(data['html']);
                   } else {
                     $(this._table).html(data['html']);  
@@ -221,9 +227,7 @@
                   });
                 });
               }
-            },
-
-            
+            },   
         };
         
         /**
