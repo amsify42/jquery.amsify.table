@@ -22,15 +22,15 @@
 
             this._table           = null;
             this.inputClass       = {
-              amsify      : 'amsify-column-input',
-              bootstrap   : 'form-control',
-              materialize : 'browser-default',
+              amsify      : '.amsify-column-input',
+              bootstrap   : '.form-control',
+              materialize : '.browser-default',
             };
-            this.columnSelector   = 'amsify-sort-table';
-            this.paginateSelector = 'amsify-sort-paginate';
-            this.columnInputArea  = 'amsify-column-input-span';
+            this.columnSelector   = '.amsify-sort-table';
+            this.paginateSelector = '.amsify-sort-paginate';
+            this.columnInputArea  = '.amsify-column-input-span';
             this.paginateArea     = '#pagination';
-            this.datePickerClass  = 'datepicker';
+            this.datePickerClass  = '.datepicker';
             this.datePickerAttr   = 'datepicker';
             this.dateFormat       = 'yy-mm-dd';
             this.searchActionAttr = 'data-method';
@@ -46,7 +46,6 @@
              * @param  {object} settings
              */
             _init               : function(table, settings) {
-                var _self     = this;
                 this._table   = table;
                 this.setTableColumns();
             },
@@ -60,10 +59,10 @@
                 var name              = $.trim($(column).text());
                 columnNames.push(name);
                 if($(column).hasClass('skip')) {
-                  $(column).removeClass(this.columnSelector);
+                  $(column).removeClass(_self.columnSelector.substring(1));
                   columnInputs[name]  = '';
                 } else {
-                  $(column).addClass(this.columnSelector);
+                  $(column).addClass(_self.columnSelector.substring(1));
                   if($(column).attr('selecthtml')) {
                     var htmlSeletor     = $(column).attr('selecthtml');
                     columnInputs[name]  = '<select class="'+_self.getInputClass(settings.type)+'">'+$(htmlSeletor).html()+'</select>';
@@ -97,61 +96,57 @@
 
             sortRows            : function() {
               var _self = this;
-              AmsifyHelper.setDefaultSortIcon('.'+this.columnSelector, settings.type);
-              $('.'+this.columnSelector).click(function(e){
+              AmsifyHelper.setDefaultSortIcon(this.columnSelector, settings.type);
+              $(this.columnSelector).click(function(e){
                 e.stopImmediatePropagation();
-                $('.'+this.columnSelector).removeClass('active-sort');
+                $(_self.columnSelector).removeClass('active-sort');
                 $(this).addClass('active-sort');
-                if($(this).hasClass('skip')) {
-                  return false;
-                }
+                if($(this).hasClass('skip')) return false;
                 var rowHtml         = $(this).html();
                 var rowtxt          = $(this).clone().children().remove().end().text();
-                var cellIndex       = $(this).parent('th').index();
+                var cellIndex       = $(this).index();
                 if($(this).data('selecthtml')) {
-                  var rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find('.'+_self.inputClass.amsify).find(':selected').val();
+                  var rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).find(':selected').val();
                 } else {
-                  var rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find('.'+_self.inputClass.amsify).val();
+                  var rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val();
                 }
 
-                if(rowSearchInput === undefined) {
-                  rowSearchInput = '';
-                }
+                if(rowSearchInput === undefined) rowSearchInput = '';
 
-                var result          = AmsifyHelper.getSortIcon(rowHtml, type, rowSearchInput);
+                var result          = AmsifyHelper.getSortIcon(rowHtml, settings.type, rowSearchInput);
                 var basicSort       = result['basic'];
                 var insertHtml      = result['insertHtml'];
 
-                AmsifyTable.loadSortedResult(rowtxt, rowSearchInput, result['sort_type'], 1);
+                _self.loadSortedResult(rowtxt, rowSearchInput, result['sort_type'], 1);
 
-                if(type == 'bootstrap') {
-                  $('.'+this.columnSelector).find('.fa').remove();
+                if(settings.type == 'bootstrap') {
+                  $(_self.columnSelector).find('.fa').remove();
                   $(this).find('.fa').remove();
                 } else {
-                  $('.'+this.columnSelector).find('.sort-icon').remove();
+                  $(_self.columnSelector).find('.sort-icon').remove();
                   $(this).find('.sort-icon').remove();           
                 }
 
-                $('.'+this.columnSelector).not(this).append(basicSort);
+                $(_self.columnSelector).not(this).append(basicSort);
                 $(this).append(insertHtml);
 
-                $('.amsify-column-input').val('');
-                $(this).closest('tr').next().children().eq(cellIndex).find('.amsify-column-input').val(rowSearchInput);
+                $(_self.inputClass.amsify).val('');
+                $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val(rowSearchInput);
               }); 
 
-             $('.'+_self.inputClass.amsify).keyup(function(e){
+             $(_self.inputClass.amsify).keyup(function(e){
                e.stopImmediatePropagation();
                if(e.keyCode == 13) {
                   var cellIndex  = $(this).parent('td').index();
-                  $(this).closest('tr').prev().children().eq(cellIndex).find('.'+this.columnSelector).click();
+                  $(this).closest('tr').prev().children().eq(cellIndex).click();
                }
              });
 
-             $('.'+_self.inputClass.amsify).change(function(e){
-                 e.stopImmediatePropagation();
+             $(_self.inputClass.amsify).change(function(e){
+                e.stopImmediatePropagation();
                 if(e.keyCode != 13) {
-                 var cellIndex       = $(this).parent('td').index();
-                 $(this).closest('tr').prev().children().eq(cellIndex).find('.'+this.columnSelector).click();
+                 var cellIndex = $(this).parent('td').index();
+                 $(this).closest('tr').prev().children().eq(cellIndex).click();
                }
              });
            },
@@ -171,7 +166,7 @@
                   ajaxMethod = AmsifyHelper.getActionURL($(_self._table).data('method'));
                  }
                  _self.loadSortedResult(column, input, sortType, page);       
-                });
+              });
             },
 
             loadSortedResult    : function(sortColumn, rowSearchInput, sortType, page) {
@@ -180,7 +175,6 @@
                                   input   : rowSearchInput,
                                   type    : sortType,
                                   page    : page,
-                                  _token  : AmsifyHelper.getToken()
                                 };
               var ajaxConfig  = {};
               ajaxConfig['beforeSend'] = function() {
@@ -193,7 +187,7 @@
                   } else {
                     $(this._table).html(data['html']);  
                   }
-                  $(paginateSelector).html(data['links']);
+                  $(this.paginateSelector).html(data['links']);
               };
               ajaxConfig['complete'] = function(data) {
                   $(this._table).css('opacity', '1');
@@ -203,15 +197,15 @@
                     settings.afterSort(data);
                   }
               };
-              AmsifyHelper.callAjax(settings.searchMethod, params, ajaxConfig);
+              AmsifyHelper.callAjax(settings.searchMethod, params, ajaxConfig, 'POST');
             },
 
             getInputClass       : function(type, name, format) {
-              var inputClass = this.inputClass.amsify+' '+this.inputClass[type];
+              var inputClass = this.inputClass.amsify.substring(1)+' '+this.inputClass[type].substring(1);
               if(name !== undefined) {
                 name = name.toLowerCase();  
                 if(name == 'date' || name.indexOf('date') == 0) {
-                  inputClass += ' '+this.datePickerClass;
+                  inputClass += ' '+this.datePickerClass.substring(1);
                   if(format !== undefined && format != '')   {
                     this.setDatePicker(type, format);
                   } else {
@@ -226,13 +220,13 @@
               format  = (format)? format: this.dateFormat;
               if(type == 'bootstrap') {
                 $(function() {
-                  $('.'+this.datePickerClass).datepicker({
+                  $(this.datePickerClass).datepicker({
                     dateFormat: format,
                   });
                 });
               } else {
                 $(function() {
-                  $('.'+this.datePickerClass).datepicker({
+                  $(this.datePickerClass).datepicker({
                     dateFormat: format,
                   });
                 });
