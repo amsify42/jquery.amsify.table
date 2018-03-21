@@ -7,8 +7,11 @@
             type                : 'bootstrap',
             contentType         : 'table',
             searchMethod        : '',
-            sortMethod          : '',
+            sortAction          : '',
+            sortAttr            : 'id',
+            sortParams          : {},
             afterSort           : {},
+            flash               : false,
         }, options);
 
         /**
@@ -52,28 +55,35 @@
               var _self           = this;
               var columnNames     = [];
               var columnInputs    = [];
-              var columns         = $(this._table).find('.'+columnSelector);
+              var columns         = $(this._table).find('thead tr th');
               $.each(columns, function(key, column){
                 var name              = $.trim($(column).text());
                 columnNames.push(name);
                 if($(column).hasClass('skip')) {
-                  $(column).removeClass(columnSelector);
+                  $(column).removeClass(this.columnSelector);
                   columnInputs[name]  = '';
-                } else if($(column).attr('selecthtml')) {
-                  var htmlSeletor     = $(column).attr('selecthtml');
-                  columnInputs[name]  = '<select class="'+_self.getInputClass(type)+'">'+$(htmlSeletor).html()+'</select>';
-                } else if($(column).attr('datepicker')) {
-                  columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+getInputClass(type, 'date', $(column).attr(_self.datePickerAttr))+'"/>';
                 } else {
-                  columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+getInputClass(type, name)+'"/>';
-                }
+                  $(column).addClass(this.columnSelector);
+                  if($(column).attr('selecthtml')) {
+                    var htmlSeletor     = $(column).attr('selecthtml');
+                    columnInputs[name]  = '<select class="'+_self.getInputClass(settings.type)+'">'+$(htmlSeletor).html()+'</select>';
+                  } else if($(column).attr('datepicker')) {
+                    columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+_self.getInputClass(settings.type, 'date', $(column).attr(_self.datePickerAttr))+'"/>';
+                  } else {
+                    columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+_self.getInputClass(settings.type, name)+'"/>';
+                  }
+                } 
               });
               // If Drag Sortable is set
-              if($(this._table).attr('drag-sortable')) {
-                var ajaxAction  = $(this._table).attr('drag-sortable');
+              var sortAction = $(this._table).attr('drag-sortable');
+              if(sortAction || settings.sortAction) {
+                var action  = (sortAction)? sortAction: settings.sortAction;
                 $(this._table).find('tbody').addClass('tbody');
-                AmsifyHelper.setDraggableSort($(this._table).find('.tbody'), settings.sortMethod, 'id', {}, config);
+                AmsifyHelper.setDraggableSort($(this._table).find('.tbody'), action, settings.sortAttr, settings.sortParams, settings);
               }
+              this.setColumnInputs(columnNames, columnInputs);
+              this.sortRows();
+              this.sortPaginate();
             },
 
             setColumnInputs     : function(names, inputs) {
@@ -87,7 +97,7 @@
 
             sortRows            : function() {
               var _self = this;
-              AmsifyHelper.setDefaultSortIcon('.'+this.columnSelector, type);
+              AmsifyHelper.setDefaultSortIcon('.'+this.columnSelector, settings.type);
               $('.'+this.columnSelector).click(function(e){
                 e.stopImmediatePropagation();
                 $('.'+this.columnSelector).removeClass('active-sort');
@@ -129,7 +139,7 @@
                 $(this).closest('tr').next().children().eq(cellIndex).find('.amsify-column-input').val(rowSearchInput);
               }); 
 
-             $('.'.this.inputClass.amsify).keyup(function(e){
+             $('.'+_self.inputClass.amsify).keyup(function(e){
                e.stopImmediatePropagation();
                if(e.keyCode == 13) {
                   var cellIndex  = $(this).parent('td').index();
@@ -137,7 +147,7 @@
                }
              });
 
-             $('.'.this.inputClass.amsify).change(function(e){
+             $('.'+_self.inputClass.amsify).change(function(e){
                  e.stopImmediatePropagation();
                 if(e.keyCode != 13) {
                  var cellIndex       = $(this).parent('td').index();
