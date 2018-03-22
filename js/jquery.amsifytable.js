@@ -43,6 +43,7 @@
             this.searchActionAttr = 'data-method';
             this.sortActionAttr   = 'drag-sortable';
             this.bodyLoaderClass  = '.section-body-loader';
+            this.inputHtmlAttr    = 'data-input-html';
         };
 
 
@@ -62,17 +63,17 @@
               var columnInputs    = [];
               var columns         = $(this._table).find('thead tr th');
               $.each(columns, function(key, column){
-                var name              = $.trim($(column).text());
+                var name                = $.trim($(column).text());
                 columnNames.push(name);
                 if($(column).hasClass('skip')) {
                   $(column).removeClass(_self.columnSelector.substring(1));
-                  columnInputs[name]  = '';
+                  columnInputs[name]    = '';
                 } else {
                   $(column).addClass(_self.columnSelector.substring(1));
-                  if($(column).attr('selecthtml')) {
-                    var htmlSeletor     = $(column).attr('selecthtml');
-                    columnInputs[name]  = '<select class="'+_self.getInputClass(settings.type)+'">'+$(htmlSeletor).html()+'</select>';
-                  } else if($(column).attr('datepicker')) {
+                  if($(column).attr(_self.inputHtmlAttr)) {
+                    var htmlSeletor     = $(column).attr(_self.inputHtmlAttr);
+                    columnInputs[name]  = $(htmlSeletor).html();
+                  } else if($(column).attr(_self.datePickerAttr)) {
                     columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+_self.getInputClass(settings.type, 'date', $(column).attr(_self.datePickerAttr))+'"/>';
                   } else {
                     columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+_self.getInputClass(settings.type, name)+'"/>';
@@ -98,12 +99,16 @@
               });
               inputsRow += '</tr>';
               $(this._table).find('thead').append(inputsRow);
+              $(this._table).find('thead').find(':input').each(function(inputIndex, input){
+                  if(!$(input).hasClass(_self.inputClass.amsify.substring(1))) {
+                    $(input).addClass(_self.getInputClass(settings.type));
+                  }
+              });
             },
 
             sortRows            : function() {
               AmsifyHelper.setDefaultSortIcon(this.columnSelector, settings.type);
               $(this.columnSelector).click(function(e){
-                console.info();
                 e.stopImmediatePropagation();
                 $(_self.columnSelector).removeClass('active-sort');
                 $(this).addClass('active-sort');
@@ -113,7 +118,7 @@
                 var cellIndex       = $(this).index();
                 var rowSearchInput  = '';
                 if(!e.originalEvent) {
-                  if($(this).data('selecthtml')) {
+                  if($(this).attr(_self.inputHtmlAttr)) {
                     rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).find(':selected').val();
                   } else {
                     rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val();
@@ -187,7 +192,7 @@
               var params      = {
                                   column  : sortColumn,
                                   input   : rowSearchInput,
-                                  type    : sortType,
+                                  sort    : sortType,
                                   page    : page,
                                 };
               var ajaxConfig  = {};
@@ -196,20 +201,22 @@
                 $(_self._table).css('opacity', 0.5);
               };
               ajaxConfig['afterSuccess'] = function(data) {
-                  if(settings.contentType == 'table') {
-                    $(_self._table).find('tbody').html(data['html']);
-                  } else {
-                    $(_self._table).html(data['html']);  
-                  }
-                  $(_self.paginateSelector).html(data['links']);
+                if(settings.contentType == 'table') {
+                  $(_self._table).find('tbody').html(data['html']);
+                } else {
+                  $(_self._table).html(data['html']);  
+                }
+                $(_self.paginateSelector).html(data['links']);
               };
               ajaxConfig['complete'] = function(data) {
-                  $(_self._table).css('opacity', '1');
-                  $(_self.bodyLoaderClass).hide();
-                  AmsifyHelper.showURL('', page);
-                  if(settings.afterSort && typeof settings.afterSort == "function") {
-                    settings.afterSort(data);
-                  }
+                $(_self._table).css('opacity', '1');
+                $(_self.bodyLoaderClass).hide();
+                // var paramsURI = (rowSearchInput)? page+'&'+sortColumn.toLowerCase()+'='+rowSearchInput: page;
+                // paramsURI     = (sortType != 'default')? paramsURI+'&sort='+sortType: paramsURI;
+                // AmsifyHelper.showURL('', paramsURI);
+                if(settings.afterSort && typeof settings.afterSort == "function") {
+                  settings.afterSort(data);
+                }
               };
               AmsifyHelper.callAjax(settings.searchMethod, params, ajaxConfig, 'POST');
             },

@@ -13,5 +13,5 @@ echo json_encode(array(
 											<td>name3</td>
 											<td>Inactive</td>
 											<td>name3@email.com</td>
-										</tr>',
+										</tr>'
 					));

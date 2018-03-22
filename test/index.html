@@ -30,7 +30,7 @@
 			<thead>
 				<tr>
 					<th>Name</th>
-					<th>Status</th>
+					<th data-input-html="#status">Status</th>
 					<th>Email</th>
 				</tr>
 			</thead>
@@ -50,12 +50,24 @@
 	</div>
 	<div class="col-md-3"></div>
 </div>
+<div class="hidden">
+	<div id="status">
+		<select>
+			<option value="">Select</option>
+			<option value="1">Active</option>
+			<option value="0">Inactive</option>
+		</select>
+	</div>	
+</div>
 <footer>
 	<div class="container">
 		<h1 class="text-left">Usage</h1>
 		<pre>
 			<code>
-				$('table').amsifyTable();
+				AmsifyHelper.setBaseURL('jquery-plugins');
+				$('table').amsifyTable({
+					searchMethod : 'table/test/search.php'
+				});
 			</code>
 		</pre>
 	</div>
