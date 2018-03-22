@@ -64,7 +64,9 @@
 <!-- -->
 <script type="text/javascript">
 	AmsifyHelper.setBaseURL('jquery-plugins');
-	$('table').amsifyTable();
+	$('table').amsifyTable({
+		searchMethod : 'table/test/search.php'
+	});
 </script>
 </body>
 </html>

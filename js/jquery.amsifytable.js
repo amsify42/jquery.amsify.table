@@ -13,13 +13,20 @@
             afterSort           : {},
             flash               : false,
         }, options);
-
+        /**
+         * Global variable for this object context
+         */
+        var _self;
         /**
          * initialization begins from here
          * @type {Object}
          */
         var AmsifyTable = function () {
-
+            /**
+             * Assigning this context to _self
+             * @type {object}
+             */
+            _self                 = this;
             this._table           = null;
             this.inputClass       = {
               amsify      : '.amsify-column-input',
@@ -51,7 +58,6 @@
             },
 
             setTableColumns     : function() {
-              var _self           = this;
               var columnNames     = [];
               var columnInputs    = [];
               var columns         = $(this._table).find('thead tr th');
@@ -95,20 +101,25 @@
             },
 
             sortRows            : function() {
-              var _self = this;
               AmsifyHelper.setDefaultSortIcon(this.columnSelector, settings.type);
               $(this.columnSelector).click(function(e){
+                console.info();
                 e.stopImmediatePropagation();
                 $(_self.columnSelector).removeClass('active-sort');
                 $(this).addClass('active-sort');
                 if($(this).hasClass('skip')) return false;
                 var rowHtml         = $(this).html();
-                var rowtxt          = $(this).clone().children().remove().end().text();
+                var rowtxt          = $.trim($(this).clone().children().remove().end().text());
                 var cellIndex       = $(this).index();
-                if($(this).data('selecthtml')) {
-                  var rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).find(':selected').val();
+                var rowSearchInput  = '';
+                if(!e.originalEvent) {
+                  if($(this).data('selecthtml')) {
+                    rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).find(':selected').val();
+                  } else {
+                    rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val();
+                  }
                 } else {
-                  var rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val();
+                    $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val('');
                 }
 
                 if(rowSearchInput === undefined) rowSearchInput = '';
@@ -127,8 +138,12 @@
                   $(this).find('.sort-icon').remove();           
                 }
 
-                $(_self.columnSelector).not(this).append(basicSort);
-                $(this).append(insertHtml);
+                if(rowSearchInput) {
+                  $(_self.columnSelector).append(basicSort);
+                } else {  
+                  $(_self.columnSelector).not(this).append(basicSort);
+                  $(this).append(insertHtml);
+                }
 
                 $(_self.inputClass.amsify).val('');
                 $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val(rowSearchInput);
@@ -152,7 +167,6 @@
            },
 
             sortPaginate        : function() {
-              var _self = this;
               $(this.paginateSelector).click(function(e){
                  e.preventDefault();
                  var column    = $(this).data('column');
@@ -178,20 +192,20 @@
                                 };
               var ajaxConfig  = {};
               ajaxConfig['beforeSend'] = function() {
-                $(this.bodyLoaderClass).show();
-                $(this._table).css('opacity', 0.5);
+                $(_self.bodyLoaderClass).show();
+                $(_self._table).css('opacity', 0.5);
               };
               ajaxConfig['afterSuccess'] = function(data) {
                   if(settings.contentType == 'table') {
-                    $(this._table).find('tbody').html(data['html']);
+                    $(_self._table).find('tbody').html(data['html']);
                   } else {
-                    $(this._table).html(data['html']);  
+                    $(_self._table).html(data['html']);  
                   }
-                  $(this.paginateSelector).html(data['links']);
+                  $(_self.paginateSelector).html(data['links']);
               };
               ajaxConfig['complete'] = function(data) {
-                  $(this._table).css('opacity', '1');
-                  $(this.bodyLoaderClass).hide();
+                  $(_self._table).css('opacity', '1');
+                  $(_self.bodyLoaderClass).hide();
                   AmsifyHelper.showURL('', page);
                   if(settings.afterSort && typeof settings.afterSort == "function") {
                     settings.afterSort(data);
