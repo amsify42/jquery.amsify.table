@@ -2,7 +2,7 @@
 
     $.fn.amsifyTable = function(options) {
 
-        // merging default settings with custom
+        // Merging default settings with custom
         var settings = $.extend({
             type                : 'bootstrap',
             contentType         : 'table',
@@ -12,13 +12,14 @@
             sortParams          : {},
             afterSort           : {},
             flash               : false,
+            rowCheckbox         : false,
         }, options);
         /**
          * Global variable for this object context
          */
         var _self;
         /**
-         * initialization begins from here
+         * Initialization begins from here
          * @type {Object}
          */
         var AmsifyTable = function () {
@@ -43,7 +44,7 @@
             this.searchActionAttr = 'data-method';
             this.sortActionAttr   = 'drag-sortable';
             this.bodyLoaderClass  = '.section-body-loader';
-            this.inputHtmlAttr    = 'data-input-html';
+            this.selectHtmlAttr   = 'select-html';
         };
 
 
@@ -55,7 +56,7 @@
              */
             _init               : function(table, settings) {
                 this._table   = table;
-                this.setTableColumns();
+                if(this._table) this.setTableColumns();
             },
 
             setTableColumns     : function() {
@@ -70,8 +71,8 @@
                   columnInputs[name]    = '';
                 } else {
                   $(column).addClass(_self.columnSelector.substring(1));
-                  if($(column).attr(_self.inputHtmlAttr)) {
-                    var htmlSeletor     = $(column).attr(_self.inputHtmlAttr);
+                  if($(column).data(_self.selectHtmlAttr)) {
+                    var htmlSeletor     = $(column).data(_self.selectHtmlAttr);
                     columnInputs[name]  = $(htmlSeletor).html();
                   } else if($(column).attr(_self.datePickerAttr)) {
                     columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+_self.getInputClass(settings.type, 'date', $(column).attr(_self.datePickerAttr))+'"/>';
@@ -104,6 +105,38 @@
                     $(input).addClass(_self.getInputClass(settings.type));
                   }
               });
+              if(settings.rowCheckbox) {
+                $(this._table).find('thead').find('tr').each(function(rowIndex, row){
+                    $(row).prepend('<td><input type="checkbox" style="width: 16px; height: 16px;"/></td>');
+                });
+                this.setRowCheckbox();
+              }
+            },
+
+            setRowCheckbox      : function() {
+              $(this._table).find('tbody').find('tr').each(function(rowIndex, row){
+                  var value = ($(this).attr(settings.sortAttr))? $(this).attr(settings.sortAttr): ($(this).index()+1);
+                  $(row).prepend('<td><input type="checkbox" name="rows[]" value="'+value+'" style="width: 16px; height: 16px;"/></td>');
+              });
+              $(this._table).find('input[type="checkbox"]:first').prop('checked', 0);
+              $(this._table).find('input[type="checkbox"]:first').click(function(){
+                if($(this).is(':checked')) {
+                  $(_self._table).find('input[type="checkbox"]').prop('checked', 1);
+                } else {
+                  $(_self._table).find('input[type="checkbox"]').prop('checked', 0);
+                }
+              });
+              $(this._table).find('input[type="checkbox"]:not(:first)').click(function(){
+                if($(this).is(':checked')) {
+                  var total   = $(_self._table).find('input[type="checkbox"]:not(:first)').length;
+                  var checked = $(_self._table).find('input[type="checkbox"]:not(:first):checked').length;
+                  if(checked >= total) {
+                    $(_self._table).find('input[type="checkbox"]:first').prop('checked', 1);
+                  }
+                } else {
+                  $(_self._table).find('input[type="checkbox"]:first').prop('checked', 0);
+                }
+              });
             },
 
             sortRows            : function() {
@@ -118,7 +151,7 @@
                 var cellIndex       = $(this).index();
                 var rowSearchInput  = '';
                 if(!e.originalEvent) {
-                  if($(this).attr(_self.inputHtmlAttr)) {
+                  if($(this).data(_self.selectHtmlAttr)) {
                     rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).find(':selected').val();
                   } else {
                     rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val();
@@ -154,19 +187,11 @@
                 $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val(rowSearchInput);
               }); 
 
-             $(_self.inputClass.amsify).keyup(function(e){
+             $(_self.inputClass.amsify).on('input change', function(e){
                e.stopImmediatePropagation();
-               if(e.keyCode == 13) {
+               if((e.type == 'keyup' && e.keyCode == 13) || (e.type == 'change' && e.keyCode != 13)) {
                   var cellIndex  = $(this).parent('td').index();
                   $(this).closest('tr').prev().children().eq(cellIndex).click();
-               }
-             });
-
-             $(_self.inputClass.amsify).change(function(e){
-                e.stopImmediatePropagation();
-                if(e.keyCode != 13) {
-                 var cellIndex = $(this).parent('td').index();
-                 $(this).closest('tr').prev().children().eq(cellIndex).click();
                }
              });
            },
@@ -206,7 +231,9 @@
                 } else {
                   $(_self._table).html(data['html']);  
                 }
-                $(_self.paginateSelector).html(data['links']);
+                $(_self.paginateArea).html(data['pagination']);
+                _self.sortPaginate();
+                if(settings.rowCheckbox) _self.setRowCheckbox();
               };
               ajaxConfig['complete'] = function(data) {
                 $(_self._table).css('opacity', '1');

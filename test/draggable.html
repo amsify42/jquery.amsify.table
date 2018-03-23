@@ -36,15 +36,30 @@
 				</tr>
 			</thead>
 			<tbody>
-				<tr>
+				<tr id="1">
 					<td>name1</td>
 					<td>Active</td>
 					<td>name1@email.com</td>
 				</tr>
-				<tr>
+				<tr id="2">
 					<td>name2</td>
 					<td>Inactive</td>
 					<td>name2@email.com</td>
+				</tr>
+				<tr id="3">
+					<td>name3</td>
+					<td>Active</td>
+					<td>name3@email.com</td>
+				</tr>
+				<tr id="4">
+					<td>name4</td>
+					<td>Inactive</td>
+					<td>name4@email.com</td>
+				</tr>
+				<tr id="5">
+					<td>name5</td>
+					<td>Active</td>
+					<td>name5@email.com</td>
 				</tr>
 			</tbody>
 		</table>
@@ -56,7 +71,10 @@
 		<h1 class="text-left">Usage</h1>
 		<pre>
 			<code>
-				$('table').amsifyTable();
+				AmsifyHelper.setBaseURL('jquery-plugins');
+				$('table').amsifyTable({
+					searchMethod : 'table/test/search.php'
+				});
 			</code>
 		</pre>
 	</div>
