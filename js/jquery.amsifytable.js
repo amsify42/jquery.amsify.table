@@ -14,20 +14,12 @@
             flash               : false,
             rowCheckbox         : false,
         }, options);
-        /**
-         * Global variable for this object context
-         */
-        var _self;
+
         /**
          * Initialization begins from here
          * @type {Object}
          */
         var AmsifyTable = function () {
-            /**
-             * Assigning this context to _self
-             * @type {object}
-             */
-            _self                 = this;
             this._table           = null;
             this.inputClass       = {
               amsify      : '.amsify-column-input',
@@ -60,6 +52,7 @@
             },
 
             setTableColumns     : function() {
+              var _self           = this;
               var columnNames     = [];
               var columnInputs    = [];
               var columns         = $(this._table).find('thead tr th');
@@ -94,6 +87,7 @@
             },
 
             setColumnInputs     : function(names, inputs) {
+              var _self     = this;
               var inputsRow = '<tr class="'+this.columnInputArea+'">';
               $.each(names, function(index, name){
                 inputsRow += '<td>'+inputs[name]+'</td>';
@@ -114,6 +108,7 @@
             },
 
             setRowCheckbox      : function() {
+              var _self = this;
               $(this._table).find('tbody').find('tr').each(function(rowIndex, row){
                   var value = ($(this).attr(settings.sortAttr))? $(this).attr(settings.sortAttr): ($(this).index()+1);
                   $(row).prepend('<td><input type="checkbox" name="rows[]" value="'+value+'" style="width: 16px; height: 16px;"/></td>');
@@ -140,6 +135,7 @@
             },
 
             sortRows            : function() {
+              var _self = this;
               AmsifyHelper.setDefaultSortIcon(this.columnSelector, settings.type);
               $(this.columnSelector).click(function(e){
                 e.stopImmediatePropagation();
@@ -197,6 +193,7 @@
            },
 
             sortPaginate        : function() {
+              var _self = this;
               $(this.paginateSelector).click(function(e){
                  e.preventDefault();
                  var column    = $(this).data('column');
@@ -214,6 +211,7 @@
             },
 
             loadSortedResult    : function(sortColumn, rowSearchInput, sortType, page) {
+              var _self       = this;
               var params      = {
                                   column  : sortColumn,
                                   input   : rowSearchInput,
