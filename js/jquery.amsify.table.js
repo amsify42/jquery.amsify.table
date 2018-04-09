@@ -1,544 +1,293 @@
- // Amsify42 Table 1.0.0
- // http://www.amsify42.com
- (function(AmsifyTable, $, undefined) {
-    /**
-     * default type
-     * @type {String}
-     */
-    var defaultType                = 'bootstrap';
-    /**
-     * default table selector
-     * @type {String}
-     */
-    var defaultTableSelector       = 'table';
-    /**
-     * default sort selector
-     * @type {String}
-     */
-    var defaultSortSelector        = '.amsify-sort-table';
-    /**
-     * default content type
-     * @type {String}
-     */
-    var defaultContentType         = 'table';
-    /**
-     * default pagination selector
-     * @type {String}
-     */
-    var defaultPaginateSelector    = '#pagination';
-    /**
-     * default ajax method action
-     * @type {String}
-     */
-    var defaultAjaxMethod          = 'sort.php';
-    /**
-     * default sort paginate selector
-     * @type {String}
-     */
-    var defaultSortPaginate        = '.amsify-sort-paginate';
-    /**
-     * default after sort callback as just intialization
-     */
-    var defaultAfterSort;
+(function($) {
 
-    /**
-     * Making method available through Jquery selector
-     * @param  {[type]} config [description]
-     * @return {[type]}        [description]
-     */
-    $.fn.amsifyTableSort = function(config) {
-        if(config !== undefined) {
-          config['tableSelector'] = this;
-        } else {
-          var config = {tableSelector: this};
-        }
-        AmsifyTable.setSort(config);
-    };
-    
-    /**
-     * init the plugin with global settings
-     * @param  {object} config
-     */
-    AmsifyTable.init = function(config) {
-      setConfig(config); 
-      var defaultTable = new AmsifyTable.Table;
-      defaultTable.set();
-    };
+    $.fn.amsifyTable = function(options) {
 
-    /**
-     * run the plugin with each instance settings
-     * @param {object} config
-     */
-    AmsifyTable.set = function(config) {
-      var newTable = new AmsifyTable.Table();
-      newTable.set(config);
-    };
+        // Merging default settings with custom
+        var settings = $.extend({
+            type                : 'bootstrap',
+            contentType         : 'table',
+            searchMethod        : '',
+            sortAction          : '',
+            sortAttr            : 'id',
+            sortParams          : {},
+            afterSort           : {},
+            flash               : false,
+            rowCheckbox         : false,
+        }, options);
 
-    /**
-     * This is like class which can be instantiated multiple times with each setting rules
-     */
-    AmsifyTable.Table = function() {
-      AmsifyTable.Table.prototype.set = function(config) {
-        if(config !== undefined) {
-          AmsifyTable.setSort(config);
-        } else {
-          AmsifyTable.setSort();
-        }
-        AmsifyHelper.bodyLoaderIEfix();
-      };
-    };
+        /**
+         * Initialization begins from here
+         * @type {Object}
+         */
+        var AmsifyTable = function () {
+            this._table           = null;
+            this.inputClass       = {
+              amsify      : '.amsify-column-input',
+              bootstrap   : '.form-control',
+              materialize : '.browser-default',
+            };
+            this.columnSelector   = '.amsify-sort-table';
+            this.paginateSelector = '.amsify-sort-paginate';
+            this.columnInputArea  = '.amsify-column-input-span';
+            this.paginateArea     = '#pagination';
+            this.datePickerClass  = '.datepicker';
+            this.datePickerAttr   = 'datepicker';
+            this.dateFormat       = 'yy-mm-dd';
+            this.searchActionAttr = 'data-method';
+            this.sortActionAttr   = 'drag-sortable';
+            this.bodyLoaderClass  = '.section-body-loader';
+            this.selectHtmlAttr   = 'select-html';
+        };
 
-    /**
-     * set table sort
-     * @param {object} config
-     */
-    AmsifyTable.setSort = function(config) {
-      var type            = defaultType;
-      var orderType       = 'amsify';
-      var tableSelector   = defaultTableSelector;
-      var sortSelector    = defaultSortSelector;  
-      if(config !== undefined) {
-        if(config.type !== undefined) { 
-         type       = config.type;
-         orderType  = config.type;
-       }
-        if(config.tableSelector !== undefined) { 
-         tableSelector  = config.tableSelector;
-       }
-       if(config.sortSelector !== undefined) { 
-         sortSelector  = config.sortSelector;
-       }
-     }
 
-     $(tableSelector).each(function(index, table){
-      $(tableSelector).attr('amsify-table-type', orderType);
-      var columnNames     = [];
-      var columnInputs    = [];
-      var columns         = $(this).find(sortSelector);
-      $.each(columns, function(key, column){
-        var name              = $.trim($(column).text());
-       columnNames.push(name);
+        AmsifyTable.prototype = {
+            /**
+             * Executing all the required settings
+             * @param  {selector} form
+             * @param  {object} settings
+             */
+            _init               : function(table, settings) {
+                this._table   = table;
+                if(this._table) this.setTableColumns();
+            },
 
-       if($(column).hasClass('skip')) {
-        $(column).removeClass(sortSelector.substring(1));
-        columnInputs[name]  = '';
-       }
-       else if($(column).attr('selecthtml')) {
-        var htmlSeletor     = $(column).attr('selecthtml');
-        columnInputs[name]  = '<select class="'+getInputClass(type)+'">'+$(htmlSeletor).html()+'</select>';
-       } 
-       else if($(column).attr('datepicker')) {
-        columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+getInputClass(type, 'date', $(column).attr('datepicker'))+'"/>';
-       }
-       else {
-        columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+getInputClass(type, name)+'"/>';
-       }
-     });
+            setTableColumns     : function() {
+              var _self           = this;
+              var columnNames     = [];
+              var columnInputs    = [];
+              var columns         = $(this._table).find('thead tr th');
+              $.each(columns, function(key, column){
+                var name                = $.trim($(column).text());
+                columnNames.push(name);
+                if($(column).hasClass('skip')) {
+                  $(column).removeClass(_self.columnSelector.substring(1));
+                  columnInputs[name]    = '';
+                } else {
+                  $(column).addClass(_self.columnSelector.substring(1));
+                  if($(column).data(_self.selectHtmlAttr)) {
+                    var htmlSeletor     = $(column).data(_self.selectHtmlAttr);
+                    columnInputs[name]  = $(htmlSeletor).html();
+                  } else if($(column).attr(_self.datePickerAttr)) {
+                    columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+_self.getInputClass(settings.type, 'date', $(column).attr(_self.datePickerAttr))+'"/>';
+                  } else {
+                    columnInputs[name]  = '<input type="text" placeholder="'+name+'" class="'+_self.getInputClass(settings.type, name)+'"/>';
+                  }
+                } 
+              });
+              // If Drag Sortable is set
+              var sortAction = $(this._table).attr('drag-sortable');
+              if(sortAction || settings.sortAction) {
+                var action  = (sortAction)? sortAction: settings.sortAction;
+                $(this._table).find('tbody').addClass('tbody');
+                AmsifyHelper.setDraggableSort($(this._table).find('.tbody'), action, settings.sortAttr, settings.sortParams, settings);
+              }
+              this.setColumnInputs(columnNames, columnInputs);
+              this.sortRows();
+              this.sortPaginate();
+            },
 
-      // If Ajax method is set
-      if($(this).attr('data-method')) {
-        if(config === undefined) {
-            config = {};
-        }
-        config['ajaxMethod'] = $(this).data('method');
-      }
+            setColumnInputs     : function(names, inputs) {
+              var _self     = this;
+              var inputsRow = '<tr class="'+this.columnInputArea+'">';
+              $.each(names, function(index, name){
+                inputsRow += '<td>'+inputs[name]+'</td>';
+              });
+              inputsRow += '</tr>';
+              $(this._table).find('thead').append(inputsRow);
+              $(this._table).find('thead').find(':input').each(function(inputIndex, input){
+                  if(!$(input).hasClass(_self.inputClass.amsify.substring(1))) {
+                    $(input).addClass(_self.getInputClass(settings.type));
+                  }
+              });
+              if(settings.rowCheckbox) {
+                $(this._table).find('thead').find('tr').each(function(rowIndex, row){
+                    $(row).prepend('<td><input type="checkbox" style="width: 16px; height: 16px;"/></td>');
+                });
+                this.setRowCheckbox();
+              }
+            },
 
-      // If Drag Sortable is set
-      if($(this).attr('drag-sortable')) {
-        var ajaxAction  = $(this).attr('drag-sortable');
-        $(this).find('tbody').addClass('tbody');
-        AmsifyHelper.setDraggableSort($(this).find('.tbody'), ajaxAction, 'id', {}, config);
-      }
+            setRowCheckbox      : function() {
+              var _self = this;
+              $(this._table).find('tbody').find('tr').each(function(rowIndex, row){
+                  var value = ($(this).attr(settings.sortAttr))? $(this).attr(settings.sortAttr): ($(this).index()+1);
+                  $(row).prepend('<td><input type="checkbox" name="rows[]" value="'+value+'" style="width: 16px; height: 16px;"/></td>');
+              });
+              $(this._table).find('input[type="checkbox"]:first').prop('checked', 0);
+              $(this._table).find('input[type="checkbox"]:first').click(function(){
+                if($(this).is(':checked')) {
+                  $(_self._table).find('input[type="checkbox"]').prop('checked', 1);
+                } else {
+                  $(_self._table).find('input[type="checkbox"]').prop('checked', 0);
+                }
+              });
+              $(this._table).find('input[type="checkbox"]:not(:first)').click(function(){
+                if($(this).is(':checked')) {
+                  var total   = $(_self._table).find('input[type="checkbox"]:not(:first)').length;
+                  var checked = $(_self._table).find('input[type="checkbox"]:not(:first):checked').length;
+                  if(checked >= total) {
+                    $(_self._table).find('input[type="checkbox"]:first').prop('checked', 1);
+                  }
+                } else {
+                  $(_self._table).find('input[type="checkbox"]:first').prop('checked', 0);
+                }
+              });
+            },
 
-      AmsifyTable.setColumnInputs(this, columnNames, columnInputs);
-      AmsifyTable.sortRows(this, sortSelector, config);
-      AmsifyTable.sortPaginate(this, config);
-    });
-   };
+            sortRows            : function() {
+              var _self = this;
+              AmsifyHelper.setDefaultSortIcon(this.columnSelector, settings.type);
+              $(this.columnSelector).click(function(e){
+                e.stopImmediatePropagation();
+                $(_self.columnSelector).removeClass('active-sort');
+                $(this).addClass('active-sort');
+                if($(this).hasClass('skip')) return false;
+                var rowHtml         = $(this).html();
+                var rowtxt          = $.trim($(this).clone().children().remove().end().text());
+                var cellIndex       = $(this).index();
+                var rowSearchInput  = '';
+                if(!e.originalEvent) {
+                  if($(this).data(_self.selectHtmlAttr)) {
+                    rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).find(':selected').val();
+                  } else {
+                    rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val();
+                  }
+                } else {
+                    $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val('');
+                }
 
-   /**
-    * call ajax to sort rows
-    * @param  {object}   sortable
-    * @param  {selector} tableSelector
-    * @param  {array}    IDs
-    */
-   AmsifyTable.callAjax = function(sortable, tableSelector, IDs) {
-      var ajaxAction  = $(tableSelector).attr('drag-sortable');
-      var params      = { ids : IDs, _token : AmsifyHelper.getToken() };
-      var ajaxConfig  = {};
-      ajaxConfig['beforeSend'] = function() {
-          $('.section-body-loader').show();
-          $(sortable).sortable('disable');
-      };
-      ajaxConfig['afterResponseError'] = function(data) {
-          $(sortable).sortable('cancel');
-      };
-      ajaxConfig['complete'] = function() {
-          $('.section-body-loader').hide();
-          $(sortable).sortable('enable');
-      };
-      AmsifyHelper.callAjax(ajaxAction, params, ajaxConfig);
-   };
+                if(rowSearchInput === undefined) rowSearchInput = '';
 
-   /**
-    * create on click sort paginate
-    * @param  {selector} tableSelector
-    * @param  {object}   config
-    */
-   AmsifyTable.sortPaginate = function(tableSelector, config) {
-      var sortPaginate        = defaultSortPaginate;
-      var contentType         = defaultContentType;  
-      var ajaxMethod          = defaultAjaxMethod;
-      var paginateSelector    = defaultPaginateSelector;
-      if(config !== undefined) {
-        if(config.sortPaginate !== undefined) { 
-         sortPaginate  = config.sortPaginate;
-       }
-       if(config.contentType !== undefined) { 
-         contentType  = config.contentType;
-       }
-       if(config.ajaxMethod !== undefined) { 
-         ajaxMethod  = config.ajaxMethod;
-       }
-       if(config.paginateSelector !== undefined) { 
-         paginateSelector  = config.paginateSelector;
-       }
-     }
-     $(document).on('click', sortPaginate, function(e){
-       e.preventDefault();
-       var column    = $(this).data('column');
-       var sortType  = $(this).data('type');
-       var page      = $(this).data('page');
-       var input     = $(this).data('input');
-       var href      = $(this).attr('href');
-       if(href) {
-        ajaxMethod = href;
-       } else if($(tableSelector).data('method')) {
-        ajaxMethod = AmsifyHelper.getActionURL($(tableSelector).data('method'));
-       }
-       AmsifyTable.loadSortedResult(column, input, sortType, tableSelector, contentType, paginateSelector, ajaxMethod, page, config);       
-      });
-   }
+                var result          = AmsifyHelper.getSortIcon(rowHtml, settings.type, rowSearchInput);
+                var basicSort       = result['basic'];
+                var insertHtml      = result['insertHtml'];
 
-   /**
-    * create column inputs for table
-    * @param {selector} table
-    * @param {array}    names
-    */
-   AmsifyTable.setColumnInputs = function(table, names, inputs) {
-      var inputsRow = '<tr class="amsify-column-input-span">';
-      $.each(names, function(index, name){
-        inputsRow += '<td>'+inputs[name]+'</td>';
-      });
-      inputsRow += '</tr>';
-      $(table).find('thead').append(inputsRow);
-   };
+                _self.loadSortedResult(rowtxt, rowSearchInput, result['sort_type'], 1);
 
-   /**
-    * sort table rows
-    * @param  {selector} tableSelector
-    * @param  {selector} sortSelector
-    * @param  {object}   config
-    */
-   AmsifyTable.sortRows = function(tableSelector, sortSelector, config) {
-      var type               = defaultType;
-      var contentType        = defaultContentType;  
-      var ajaxMethod         = defaultAjaxMethod;
-      var paginateSelector   = defaultPaginateSelector;
-      if(config !== undefined) {
-        if(config.type !== undefined) { 
-         type  = config.type;
-       }
-       if(config.contentType !== undefined) { 
-         contentType  = config.contentType;
-       }
-       if(config.ajaxMethod !== undefined) { 
-         ajaxMethod  = config.ajaxMethod;
-       }
-       if(config.paginateSelector !== undefined) { 
-         paginateSelector  = config.paginateSelector;
-       }
-     }
-     AmsifyHelper.setDefaultSortIcon(sortSelector, type);
-     $(document).on('click', sortSelector, function(e){
-        e.stopImmediatePropagation();
-        $(sortSelector).removeClass('active-sort');
-        $(this).addClass('active-sort');
-        if($(this).hasClass('skip')) {
-          return false;
-        }
-        var rowHtml         = $(this).html();
-        var rowtxt          = $(this).clone().children().remove().end().text();
-        var cellIndex       = $(this).parent('th').index();
+                if(settings.type == 'bootstrap') {
+                  $(_self.columnSelector).find('.fa').remove();
+                  $(this).find('.fa').remove();
+                } else {
+                  $(_self.columnSelector).find('.sort-icon').remove();
+                  $(this).find('.sort-icon').remove();           
+                }
 
-        if($(this).data('selecthtml')) {
-          var rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find('.amsify-column-input').find(':selected').val();
-        } else {
-          var rowSearchInput  = $(this).closest('tr').next().children().eq(cellIndex).find('.amsify-column-input').val();
-        }
+                if(rowSearchInput) {
+                  $(_self.columnSelector).append(basicSort);
+                } else {  
+                  $(_self.columnSelector).not(this).append(basicSort);
+                  $(this).append(insertHtml);
+                }
 
-        if(rowSearchInput === undefined) {
-          rowSearchInput = '';
-        }
+                $(_self.inputClass.amsify).val('');
+                $(this).closest('tr').next().children().eq(cellIndex).find(_self.inputClass.amsify).val(rowSearchInput);
+              }); 
 
-        var result          = AmsifyHelper.getSortIcon(rowHtml, type, rowSearchInput);
-        var basicSort       = result['basic'];
-        var insertHtml      = result['insertHtml'];
+             $(_self.inputClass.amsify).on('input change', function(e){
+               e.stopImmediatePropagation();
+               if((e.type == 'keyup' && e.keyCode == 13) || (e.type == 'change' && e.keyCode != 13)) {
+                  var cellIndex  = $(this).parent('td').index();
+                  $(this).closest('tr').prev().children().eq(cellIndex).click();
+               }
+             });
+           },
 
-        AmsifyTable.loadSortedResult(rowtxt, rowSearchInput, result['sort_type'], tableSelector, contentType, paginateSelector, AmsifyHelper.getActionURL(ajaxMethod), 1);
+            sortPaginate        : function() {
+              var _self = this;
+              $(this.paginateSelector).click(function(e){
+                 e.preventDefault();
+                 var column    = $(this).data('column');
+                 var sortType  = $(this).data('type');
+                 var page      = $(this).data('page');
+                 var input     = $(this).data('input');
+                 var href      = $(this).attr('href');
+                 if(href) {
+                  ajaxMethod = href;
+                 } else if($(_self._table).data('method')) {
+                  ajaxMethod = AmsifyHelper.getActionURL($(_self._table).data('method'));
+                 }
+                 _self.loadSortedResult(column, input, sortType, page);       
+              });
+            },
 
-        if(type == 'bootstrap') {
-          $(sortSelector).find('.fa').remove();
-          $(this).find('.fa').remove();
-        } else {
-          $(sortSelector).find('.sort-icon').remove();
-          $(this).find('.sort-icon').remove();           
-        }
+            loadSortedResult    : function(sortColumn, rowSearchInput, sortType, page) {
+              var _self       = this;
+              var params      = {
+                                  column  : sortColumn,
+                                  input   : rowSearchInput,
+                                  sort    : sortType,
+                                  page    : page,
+                                };
+              var ajaxConfig  = {};
+              ajaxConfig['beforeSend'] = function() {
+                $(_self.bodyLoaderClass).show();
+                $(_self._table).css('opacity', 0.5);
+              };
+              ajaxConfig['afterSuccess'] = function(data) {
+                if(settings.contentType == 'table') {
+                  $(_self._table).find('tbody').html(data['html']);
+                } else {
+                  $(_self._table).html(data['html']);  
+                }
+                $(_self.paginateArea).html(data['pagination']);
+                _self.sortPaginate();
+                if(settings.rowCheckbox) _self.setRowCheckbox();
+              };
+              ajaxConfig['complete'] = function(data) {
+                $(_self._table).css('opacity', '1');
+                $(_self.bodyLoaderClass).hide();
+                // var paramsURI = (rowSearchInput)? page+'&'+sortColumn.toLowerCase()+'='+rowSearchInput: page;
+                // paramsURI     = (sortType != 'default')? paramsURI+'&sort='+sortType: paramsURI;
+                // AmsifyHelper.showURL('', paramsURI);
+                if(settings.afterSort && typeof settings.afterSort == "function") {
+                  settings.afterSort(data);
+                }
+              };
+              AmsifyHelper.callAjax(settings.searchMethod, params, ajaxConfig, 'POST');
+            },
 
-        $(sortSelector).not(this).append(basicSort);
-        $(this).append(insertHtml);
+            getInputClass       : function(type, name, format) {
+              var inputClass = this.inputClass.amsify.substring(1)+' '+this.inputClass[type].substring(1);
+              if(name !== undefined) {
+                name = name.toLowerCase();  
+                if(name == 'date' || name.indexOf('date') == 0) {
+                  inputClass += ' '+this.datePickerClass.substring(1);
+                  if(format !== undefined && format != '')   {
+                    this.setDatePicker(type, format);
+                  } else {
+                    this.setDatePicker(type);
+                  }
+                }
+              }
+              return inputClass;
+            },
 
-        $('.amsify-column-input').val('');
-        $(this).closest('tr').next().children().eq(cellIndex).find('.amsify-column-input').val(rowSearchInput);
-      }); 
-
-     $(document).on('keyup', '.amsify-column-input', function(e){
-       e.stopImmediatePropagation();
-       if(e.keyCode == 13) {
-          var cellIndex  = $(this).parent('td').index();
-          $(this).closest('tr').prev().children().eq(cellIndex).find(sortSelector).click();
-       }
-     });
-
-     $(document).on('change', '.amsify-column-input', function(e){
-         e.stopImmediatePropagation();
-        if(e.keyCode != 13) {
-         var cellIndex       = $(this).parent('td').index();
-         $(this).closest('tr').prev().children().eq(cellIndex).find(sortSelector).click();
-       }
-     });
-   }; 
-
-    /**
-     * load sorted result
-     * @param  {string}   sortColumn
-     * @param  {string}   rowSearchInput
-     * @param  {string}   type
-     * @param  {selector} tableSelector
-     * @param  {string}   contentType
-     * @param  {selector} paginateSelector
-     * @param  {string}   ajaxMethod
-     * @param  {integer}  page
-     * @param  {object}   config
-     */
-    AmsifyTable.loadSortedResult = function(sortColumn, rowSearchInput, type, tableSelector, contentType, paginateSelector, ajaxMethod, page, config) {
-      
-      var params      = { column : sortColumn, input : rowSearchInput, type : type, page : page, _token : AmsifyHelper.getToken()};
-      var ajaxConfig  = {};
-
-      ajaxConfig['beforeSend'] = function() {
-        $('.section-body-loader').show();
-        $(tableSelector).css('opacity', 0.5);
-      };
-      ajaxConfig['afterSuccess'] = function(data) {
-          if(contentType == 'table') {
-            $(tableSelector).find('tbody').html(data['html']);
-          } else {
-            $(tableSelector).html(data['html']);  
-          }
-          $(paginateSelector).html(data['links']);
-      };
-      ajaxConfig['complete'] = function(data) {
-          $(tableSelector).css('opacity', '1');
-          $('.section-body-loader').hide();
-          AmsifyHelper.showURL('', page);
-          if(config !== undefined) {
-            if(config.afterSort && typeof config.afterSort == "function") {
-              config.afterSort(data);
-            }
-          }
-      };
-
-      AmsifyHelper.callAjax(ajaxMethod, params, ajaxConfig);
-    };
-
-    /**
-     * get input class
-     * @param  {string} type
-     * @param  {string} name
-     * @param  {string} format
-     * @return {string}
-     */
-    function getInputClass(type, name, format) {
-      var inputClass = 'amsify-column-input';
-      if(type == 'bootstrap') {
-        inputClass += ' form-control';
-      }
-      else if(type == 'materialize') {
-        inputClass += ' browser-default';
-      }
-      if(name !== undefined) {
-        name = name.toLowerCase();  
-        if(name == 'date' || name.indexOf('date') == 0) {
-          inputClass += ' datepicker';
-          if(format !== undefined && format != '')   {
-            setDatePicker(type, format);
-          } else {
-            setDatePicker(type);
-          }
-        }
-      }
-      return inputClass;
-    };
-
-    /**
-     * set datepicker for column input
-     * @param {string} type
-     * @param {string} format
-     */
-    function setDatePicker(type, format) {
-      var defaultFormat = 'yy-mm-dd';
-      if(format !== undefined) {
-        defaultFormat = format;
-      }
-      if(type == 'bootstrap') {
-        $(function() {
-          $('.datepicker').datepicker({
-            dateFormat: defaultFormat,
-          });
+            setDatePicker     : function(type, format) {
+              format  = (format)? format: this.dateFormat;
+              if(type == 'bootstrap') {
+                $(function() {
+                  $(this.datePickerClass).datepicker({
+                    dateFormat: format,
+                  });
+                });
+              } else {
+                $(function() {
+                  $(this.datePickerClass).datepicker({
+                    dateFormat: format,
+                  });
+                });
+              }
+            },   
+        };
+        
+        /**
+         * Initializing each instance of selector
+         * @return {object}
+         */
+        return this.each(function() {
+            (new AmsifyTable)._init(this, settings);
         });
-      } else {
-        $(function() {
-          $('.datepicker').datepicker({
-            dateFormat: defaultFormat,
-          });
-        });
-      }
+
     };
 
-    /**
-     * table row operation
-     * @param  {string}   type
-     * @param  {selector} selector
-     * @param  {[integer} index
-     * @param  {string}   html
-     */
-    AmsifyTable.tableOperation = function(type, selector, index, html) {
-      if(type == 'add') {
-        AmsifyTable.addRow(selector, html);
-      } 
-      else if(type == 'update') {
-        AmsifyTable.updateRow(selector, index, html);
-      }
-      else if(type == 'delete') {
-        AmsifyTable.removeRow(selector, index);
-      }
-    };
-
-    /**
-     * add table row
-     * @param  {string}  content
-     * @param  {string}  rowContent
-     */
-    AmsifyTable.addRow = function(content, rowContent){
-      if(content == 'table') {
-        $table = $(content+' tbody');
-        $table.find('.amsify-not-found').remove();
-        $(rowContent).prependTo($table)
-                     .children()
-                     .first()
-                     .prepend(AmsifyHelper.reorderImage($(content).attr('amsify-table-type')));
-        $(content+' tbody tr:first').css({'background-color':'#CCFFCC','color':''});
-        setTimeout(function(){
-          $(content+' tbody tr:first').css({'background-color':'','color':''});
-        }, 3000);
-      } else {
-        $table = $(content);
-        $table.find('.amsify-not-found').remove();
-        $table.children('div:eq(0)').after(rowContent);
-        $(content+' div:eq(1)').css({'background-color':'#CCFFCC','color':''});
-        setTimeout(function(){
-          $(content+' div:eq(1)').css({'background-color':'','color':''});
-        }, 3000);
-      }
-    };
-
-    /**
-     * update table row
-     * @param  {string}  content
-     * @param  {integer} rowIndex
-     * @param  {string}  rowContent
-     */
-    AmsifyTable.updateRow = function(content, rowIndex, rowContent) {
-      if(content == 'table') {
-        $row = $(content).closest('table').find('tbody tr:eq('+rowIndex+')');
-      } else {
-        $row = $(content+' div:eq('+rowIndex+')');
-      }
-      $row.empty().html(rowContent).css({"background-color":"#2FAFE5",'color':''});
-      $row.children().first().prepend(AmsifyHelper.reorderImage($(content).attr('amsify-table-type')));
-      setTimeout(function() {
-        $row.css({'background-color':'','color':''});
-      }, 3000);
-    };
-
-    /**
-     * remove table row
-     * @param  {string}  content
-     * @param  {integer} rowIndex
-     */
-    AmsifyTable.removeRow = function(content, rowIndex) {
-      if(content == 'table') {
-        $row = $(content).closest('table').find('tbody tr:eq('+rowIndex+')');
-      } else {
-        $row = $(content+' div:eq('+rowIndex+')');
-      }
-      $row.css({"background-color":"#FF9999",'color':''});
-      setTimeout(function() {
-        $row.css({"background-color":"",'color':''});
-      }, 3000);
-      $row.fadeOut(3000);
-      setTimeout(function() {
-        $row.remove();
-      }, 3000);
-    };  
-
-/**
- * 
- ************ Configuration section ************
- *
- **/
-    /**
-     * set the global config based on options passed
-     * @param {object} config
-     */
-    function setConfig(config) {
-      if(config !== undefined) {
-       if(config.tableSelector !== undefined) {
-         defaultTableSelector = config.tableSelector;
-       }
-       if(config.type !== undefined) {
-         defaultType = config.type;
-       }
-       if(config.tableSelector !== undefined) {
-         defaultTableSelector = config.tableSelector;
-       }
-       if(config.sortSelector !== undefined) {
-         defaultSortSelector = config.sortSelector;
-       }
-       if(config.contentType !== undefined) {
-         defaultContentType = config.contentType;
-       }
-       if(config.paginateSelector !== undefined) {
-         defaultPaginateSelector = config.paginateSelector;
-       }
-       if(config.ajaxMethod !== undefined) {
-         defaultAjaxMethod = config.ajaxMethod;
-       }
-       if(config.afterSort !== undefined) {
-         defaultAfterSort = config.afterSort;
-       }
-     }
-   };
-
- }(window.AmsifyTable = window.AmsifyTable || {}, jQuery));
+}(jQuery));
