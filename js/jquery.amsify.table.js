@@ -1,3 +1,7 @@
+/**
+ * Amsify Jquery Table 2.0
+ * http://www.amsify42.com
+ */
 (function($) {
 
     $.fn.amsifyTable = function(options) {
