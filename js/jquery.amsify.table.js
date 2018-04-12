@@ -5,8 +5,10 @@
 (function($) {
 
     $.fn.amsifyTable = function(options) {
-
-        // Merging default settings with custom
+        /**
+         * Merging default settings with custom
+         * @type {object}
+         */
         var settings = $.extend({
             type                : 'bootstrap',
             contentType         : 'table',
@@ -43,14 +45,12 @@
             this.selectHtmlAttr   = 'select-html';
         };
 
-
         AmsifyTable.prototype = {
             /**
              * Executing all the required settings
              * @param  {selector} form
-             * @param  {object} settings
              */
-            _init               : function(table, settings) {
+            _init               : function(table) {
                 this._table   = table;
                 if(this._table) this.setTableColumns();
             },
@@ -289,7 +289,7 @@
          * @return {object}
          */
         return this.each(function() {
-            (new AmsifyTable)._init(this, settings);
+            (new AmsifyTable)._init(this);
         });
 
     };
