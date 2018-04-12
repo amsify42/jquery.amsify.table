@@ -12,7 +12,7 @@
         var settings = $.extend({
             type                : 'bootstrap',
             contentType         : 'table',
-            searchMethod        : '',
+            searchAction        : '',
             sortAction          : '',
             sortAttr            : 'id',
             sortParams          : {},
@@ -247,7 +247,7 @@
                   settings.afterSort(data);
                 }
               };
-              AmsifyHelper.callAjax(settings.searchMethod, params, ajaxConfig, 'POST');
+              AmsifyHelper.callAjax(settings.searchAction, params, ajaxConfig, 'POST');
             },
 
             getInputClass       : function(type, name, format) {
