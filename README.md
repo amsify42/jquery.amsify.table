@@ -40,6 +40,16 @@ After plugin initialization, one more row will be added with inputs just below t
 Sort icons will also be rendered with click event. Onclick ajax will be called with column name, sort type and column input.
 <br/>
 
+Ajax response must return **html** and **pagination**(if required) content
+```js
+	{
+		status: true,
+		html: '<tr>...</tr><tr>...</tr><tr>...</tr>',
+		pagination: '<ul class="pagination">...</ul>'
+	}
+```
+**Note:** Pagination content loads into **#pagination** selector.
+
 For making the table rows draggable sort, you can also set its action in table attribute
 ```html
 	<table drag-sortable="http://site.com/sort">
