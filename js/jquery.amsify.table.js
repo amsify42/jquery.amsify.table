@@ -14,11 +14,12 @@
             contentType         : 'table',
             searchAction        : '',
             sortAction          : '',
-            sortAttr            : 'id',
+            rowIdAttr           : 'row-id',
             sortParams          : {},
             afterSort           : {},
             flash               : false,
             rowCheckbox         : false,
+            rowCheckChange      : {},
         }, options);
 
         /**
@@ -83,7 +84,7 @@
               if(sortAction || settings.sortAction) {
                 var action  = (sortAction)? sortAction: settings.sortAction;
                 $(this._table).find('tbody').addClass('tbody');
-                AmsifyHelper.setDraggableSort($(this._table).find('.tbody'), action, settings.sortAttr, settings.sortParams, settings);
+                AmsifyHelper.setDraggableSort($(this._table).find('.tbody'), action, settings.rowIdAttr, settings.sortParams, settings);
               }
               this.setColumnInputs(columnNames, columnInputs);
               this.sortRows();
@@ -93,28 +94,35 @@
             setColumnInputs     : function(names, inputs) {
               var _self     = this;
               var inputsRow = '<tr class="'+this.columnInputArea+'">';
+              var isRow     = false;
               $.each(names, function(index, name){
+                if(inputs[name]) isRow = true;
                 inputsRow += '<td>'+inputs[name]+'</td>';
               });
               inputsRow += '</tr>';
-              $(this._table).find('thead').append(inputsRow);
-              $(this._table).find('thead').find(':input').each(function(inputIndex, input){
-                  if(!$(input).hasClass(_self.inputClass.amsify.substring(1))) {
-                    $(input).addClass(_self.getInputClass(settings.type));
-                  }
-              });
+              if(isRow) {
+                $(this._table).find('thead').append(inputsRow);
+                $(this._table).find('thead').find(':input').each(function(inputIndex, input){
+                    if(!$(input).hasClass(_self.inputClass.amsify.substring(1))) {
+                      $(input).addClass(_self.getInputClass(settings.type));
+                    }
+                });
+              }
               if(settings.rowCheckbox) {
                 $(this._table).find('thead').find('tr').each(function(rowIndex, row){
-                    $(row).prepend('<td><input type="checkbox" style="width: 16px; height: 16px;"/></td>');
+                    if(rowIndex == 0)
+                      $(row).prepend('<td><input type="checkbox" style="width: 16px; height: 16px;"/></td>');
+                    else
+                      $(row).prepend('<td></td>');
                 });
-                this.setRowCheckbox();
+                this.setRowCheckboxEvents();
               }
             },
 
-            setRowCheckbox      : function() {
+            setRowCheckboxEvents      : function() {
               var _self = this;
               $(this._table).find('tbody').find('tr').each(function(rowIndex, row){
-                  var value = ($(this).attr(settings.sortAttr))? $(this).attr(settings.sortAttr): ($(this).index()+1);
+                  var value = ($(this).attr(settings.rowIdAttr))? $(this).attr(settings.rowIdAttr): ($(this).index()+1);
                   $(row).prepend('<td><input type="checkbox" name="rows[]" value="'+value+'" style="width: 16px; height: 16px;"/></td>');
               });
               $(this._table).find('input[type="checkbox"]:first').prop('checked', 0);
@@ -124,16 +132,27 @@
                 } else {
                   $(_self._table).find('input[type="checkbox"]').prop('checked', 0);
                 }
+                var checked = $(_self._table).find('input[type="checkbox"]:not(:first):checked').map(function(){
+                    return $(this).val();
+                  }).get();
+                if(settings.rowCheckChange && typeof settings.rowCheckChange == "function") {
+                  settings.rowCheckChange(checked);
+                }
               });
               $(this._table).find('input[type="checkbox"]:not(:first)').click(function(){
+                var checked = $(_self._table).find('input[type="checkbox"]:not(:first):checked').map(function(){
+                    return $(this).val();
+                  }).get();
                 if($(this).is(':checked')) {
                   var total   = $(_self._table).find('input[type="checkbox"]:not(:first)').length;
-                  var checked = $(_self._table).find('input[type="checkbox"]:not(:first):checked').length;
-                  if(checked >= total) {
+                  if(checked.length >= total) {
                     $(_self._table).find('input[type="checkbox"]:first').prop('checked', 1);
                   }
                 } else {
                   $(_self._table).find('input[type="checkbox"]:first').prop('checked', 0);
+                }
+                if(settings.rowCheckChange && typeof settings.rowCheckChange == "function") {
+                  settings.rowCheckChange(checked);
                 }
               });
             },
