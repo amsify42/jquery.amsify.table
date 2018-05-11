@@ -44,6 +44,10 @@
             this.sortActionAttr   = 'drag-sortable';
             this.bodyLoaderClass  = '.section-body-loader';
             this.selectHtmlAttr   = 'select-html';
+            this.checkbox         = {
+              all : '.amsify-table-checkrow-all',
+              row : '.amsify-table-checkrow',
+            };
         };
 
         AmsifyTable.prototype = {
@@ -100,7 +104,7 @@
                 inputsRow += '<td>'+inputs[name]+'</td>';
               });
               inputsRow += '</tr>';
-              if(isRow) {
+              if(isRow && !$(this._table).find(this.columnInputArea).length) {
                 $(this._table).find('thead').append(inputsRow);
                 $(this._table).find('thead').find(':input').each(function(inputIndex, input){
                     if(!$(input).hasClass(_self.inputClass.amsify.substring(1))) {
@@ -109,12 +113,14 @@
                 });
               }
               if(settings.rowCheckbox) {
-                $(this._table).find('thead').find('tr').each(function(rowIndex, row){
-                    if(rowIndex == 0)
-                      $(row).prepend('<td><input type="checkbox" style="width: 16px; height: 16px;"/></td>');
-                    else
-                      $(row).prepend('<td></td>');
-                });
+                if(!$(this._table).find(_self.checkbox.all).length) {
+                  $(this._table).find('thead').find('tr').each(function(rowIndex, row){
+                      if(rowIndex == 0)
+                        $(row).prepend('<td><input class="'+_self.checkbox.all.substring(1)+'" type="checkbox" style="width: 16px; height: 16px;"/></td>');
+                      else
+                        $(row).prepend('<td></td>');
+                  });
+                }
                 this.setRowCheckboxEvents();
               }
             },
@@ -122,34 +128,36 @@
             setRowCheckboxEvents      : function() {
               var _self = this;
               $(this._table).find('tbody').find('tr').each(function(rowIndex, row){
-                  var value = ($(this).attr(settings.rowIdAttr))? $(this).attr(settings.rowIdAttr): ($(this).index()+1);
-                  $(row).prepend('<td><input type="checkbox" name="rows[]" value="'+value+'" style="width: 16px; height: 16px;"/></td>');
+                  if(!$(row).find(_self.checkbox.row).length) {
+                    var value = ($(this).attr(settings.rowIdAttr))? $(this).attr(settings.rowIdAttr): ($(this).index()+1);
+                    $(row).prepend('<td><input class="'+_self.checkbox.row.substring(1)+'" type="checkbox" name="rows[]" value="'+value+'" style="width: 16px; height: 16px;"/></td>');
+                  }
               });
-              $(this._table).find('input[type="checkbox"]:first').prop('checked', 0);
-              $(this._table).find('input[type="checkbox"]:first').click(function(){
+              $(this._table).find(this.checkbox.all).prop('checked', 0);
+              $(this._table).find(this.checkbox.all).click(function(){
                 if($(this).is(':checked')) {
-                  $(_self._table).find('input[type="checkbox"]').prop('checked', 1);
+                  $(_self._table).find(_self.checkbox.row).prop('checked', 1);
                 } else {
-                  $(_self._table).find('input[type="checkbox"]').prop('checked', 0);
+                  $(_self._table).find(_self.checkbox.row).prop('checked', 0);
                 }
-                var checked = $(_self._table).find('input[type="checkbox"]:not(:first):checked').map(function(){
-                    return $(this).val();
-                  }).get();
+                var checked = $(_self._table).find(_self.checkbox.row+':checked').map(function(){
+                                return $(this).val();
+                              }).get();
                 if(settings.rowCheckChange && typeof settings.rowCheckChange == "function") {
                   settings.rowCheckChange(checked);
                 }
               });
-              $(this._table).find('input[type="checkbox"]:not(:first)').click(function(){
-                var checked = $(_self._table).find('input[type="checkbox"]:not(:first):checked').map(function(){
+              $(this._table).find(this.checkbox.row).click(function(){
+                var checked = $(_self._table).find(_self.checkbox.row+':checked').map(function(){
                     return $(this).val();
                   }).get();
                 if($(this).is(':checked')) {
-                  var total   = $(_self._table).find('input[type="checkbox"]:not(:first)').length;
+                  var total   = $(_self._table).find(_self.checkbox.row).length;
                   if(checked.length >= total) {
-                    $(_self._table).find('input[type="checkbox"]:first').prop('checked', 1);
+                    $(_self._table).find(_self.checkbox.all).prop('checked', 1);
                   }
                 } else {
-                  $(_self._table).find('input[type="checkbox"]:first').prop('checked', 0);
+                  $(_self._table).find(_self.checkbox.all).prop('checked', 0);
                 }
                 if(settings.rowCheckChange && typeof settings.rowCheckChange == "function") {
                   settings.rowCheckChange(checked);
@@ -254,7 +262,7 @@
                 }
                 $(_self.paginateArea).html(data['pagination']);
                 _self.sortPaginate();
-                if(settings.rowCheckbox) _self.setRowCheckbox();
+                if(settings.rowCheckbox) _self.setRowCheckboxEvents();
               };
               ajaxConfig['complete'] = function(data) {
                 $(_self._table).css('opacity', '1');
